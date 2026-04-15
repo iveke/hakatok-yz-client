@@ -37,7 +37,20 @@ export function CreateShipmentForm() {
 
   return (
     <form
-      onSubmit={handleSubmit((v) => mutation.mutate(v))}
+      onSubmit={handleSubmit((v) => {
+      const destinationStation = STATIONS.find(s => s.id === v.destinationStationId);
+      const originStation = STATIONS.find(s => s.id === v.originStationId);
+
+      const payload = {
+        ...v,
+        destinationStationId: v.destinationStationId,
+        originStationId: v.originStationId,
+        ["fromCity" as string]: originStation ? originStation.name : "Невідома станція",
+        ["toCity" as string]: destinationStation ? destinationStation.name : "Невідома станція",
+      } as CreateShipmentValues;
+
+      mutation.mutate(payload);
+    })}
       className="max-w-xl space-y-5"
     >
       {/* Cargo type */}

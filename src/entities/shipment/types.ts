@@ -9,13 +9,17 @@ export type ShipmentStatus =
 
 export interface Shipment {
   id: string;
-  cargoType: CargoType;
-  wagonCount: number;
-  originStationId: string;
-  destinationStationId: string;
-  deadline: string; // ISO date
-  status: ShipmentStatus;
-  createdAt: string;
+  fromStationId: number;
+  cargo: number;
+  fromLat: number;
+  fromLon: number;
+  toLat: number;
+  toLon: number;
+  fromCity: string;
+  toCity: string;
+  deadline: string;
+  isAssigned: boolean;
+  status: "Pending" | "Assigned" | "Completed"; // У Івана з великої!
 }
 
 export interface WagonSuggestion {

@@ -3,8 +3,8 @@ import {
   CARGO_TYPE_LABELS,
   CARGO_TO_WAGON,
   WAGON_TYPE_LABELS,
+  CargoType,
 } from "@/entities/wagon/types";
-import { getStationById } from "@/shared/config/stations";
 import { ArrowRight, Calendar, Package, Train } from "lucide-react";
 
 interface Props {
@@ -12,25 +12,30 @@ interface Props {
   onClick?: () => void;
 }
 
+// Додаємо підтримку статусів з великої літери, які приходять від Івана
 const STATUS_LABELS: Record<string, string> = {
+  Pending: "Очікує",
+  Assigned: "Підібрано",
+  Completed: "Виконано",
+  // про всяк випадок залишаємо старі
   pending: "Очікує",
   matched: "Підібрано",
-  confirmed: "Підтверджено",
-  in_transit: "В дорозі",
-  delivered: "Доставлено",
 };
 
 const STATUS_STYLES: Record<string, string> = {
+  Pending: "efficiency-badge-yellow",
+  Assigned: "efficiency-badge-green",
+  Completed: "efficiency-badge-green",
   pending: "efficiency-badge-yellow",
-  matched: "efficiency-badge-green",
-  confirmed: "efficiency-badge-green",
-  in_transit: "efficiency-badge-green",
-  delivered: "efficiency-badge-green",
 };
 
 export function ShipmentCard({ shipment, onClick }: Props) {
-  const origin = getStationById(shipment.originStationId);
-  const destination = getStationById(shipment.destinationStationId);
+  // Тепер беремо назви міст напряму з об'єкта, який прислав бекенд
+  const originName = shipment.fromCity || `Станція ${shipment.fromStationId}`;
+  const destinationName = shipment.toCity || "—";
+
+  // Приводимо вантаж до типу, який розуміє наш словник (якщо це число)
+  const cargoKey = String(shipment.cargo) as CargoType;
 
   return (
     <div
@@ -41,27 +46,29 @@ export function ShipmentCard({ shipment, onClick }: Props) {
         <span className="text-xs font-mono text-muted-foreground">
           {shipment.id}
         </span>
-        <span className={STATUS_STYLES[shipment.status]}>
-          {STATUS_LABELS[shipment.status]}
+        <span className={STATUS_STYLES[shipment.status] || "efficiency-badge-yellow"}>
+          {STATUS_LABELS[shipment.status] || shipment.status}
         </span>
       </div>
 
       <div className="flex items-center gap-2 text-sm font-medium">
-        <span>{origin?.name ?? "—"}</span>
+        <span>{originName}</span>
         <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
-        <span>{destination?.name ?? "—"}</span>
+        <span>{destinationName}</span>
       </div>
 
       <div className="flex items-center gap-4 text-xs text-muted-foreground">
         <span className="flex items-center gap-1">
           <Package className="h-3.5 w-3.5" />
-          {CARGO_TYPE_LABELS[shipment.cargoType]}
+          {CARGO_TYPE_LABELS[cargoKey] || `Вантаж #${shipment.cargo}`}
         </span>
+        
+        {/* Оскільки в бекенді поки немає кількості вагонів, показуємо заглушку або тип */}
         <span className="flex items-center gap-1">
           <Train className="h-3.5 w-3.5" />
-          {shipment.wagonCount} ×{" "}
-          {WAGON_TYPE_LABELS[CARGO_TO_WAGON[shipment.cargoType]]}
+          {WAGON_TYPE_LABELS[CARGO_TO_WAGON[cargoKey]] || "Універсальний вагон"}
         </span>
+
         <span className="flex items-center gap-1">
           <Calendar className="h-3.5 w-3.5" />
           {new Date(shipment.deadline).toLocaleDateString("uk-UA")}
