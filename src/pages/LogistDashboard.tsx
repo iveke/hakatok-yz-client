@@ -9,6 +9,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { AppLayout } from "@/app/layout/AppLayout";
 import type { Shipment } from "@/entities/shipment/types";
+import { updateShipmentStatusApi } from "@/features/shipment-list/api/get-shipments";
+
 
 export default function LogistDashboard() {
   const [selectedShipment, setSelectedShipment] = useState<Shipment | null>(
@@ -23,25 +25,37 @@ export default function LogistDashboard() {
 
   const { data: suggestions = [] } = useQuery({
     queryKey: ["wagon-suggestion", selectedShipment?.id],
-    queryFn: () =>
-      selectedShipment
-        ? getWagonSuggestion(
-            selectedShipment.originStationId,
-            selectedShipment.cargoType,
-            selectedShipment.wagonCount,
-          )
-        : Promise.resolve([]),
+    queryFn: () => {
+      if (!selectedShipment) return Promise.resolve([]);
+      // Передаємо тільки ID заявки, як хоче бекенд
+      return getWagonSuggestion(selectedShipment.id); 
+    },
     enabled: !!selectedShipment,
   });
 
-  const pendingCount = shipments.filter((s) => s.status === "pending").length;
+  const pendingCount = shipments.filter((s) => s.status === "Pending").length;
   const totalWagons = mockStore.wagons.length;
   const emptyWagons = mockStore.wagons.filter((w) => w.isEmpty).length;
 
-  const handleConfirm = (savingsUah: number) => {
-    mockStore.confirmSuggestion(savingsUah);
-    setSavings(mockStore.confirmedSavings);
-    toast.success("Вагон призначено!");
+  const handleConfirm = async (savingsUah: number) => {
+    if (!selectedShipment) return;
+
+    try {
+      // Викликаємо ту саму функцію, яку ми щойно створили
+      await updateShipmentStatusApi(selectedShipment.id, "Assigned");
+      
+      setSavings(prev => prev + savingsUah);
+      toast.success("Статус оновлено на бекенді!");
+      
+      // Очищуємо вибір, щоб оновити список
+      setSelectedShipment(null); 
+      
+      // Щоб список оновився сам, можна просто перезавантажити сторінку або використати queryClient.invalidateQueries
+      window.location.reload(); 
+    } catch (error) {
+      toast.error("Помилка при зв'язку з бекендом");
+      console.error(error);
+    }
   };
 
   return (
@@ -110,7 +124,7 @@ export default function LogistDashboard() {
               <div className="space-y-3">
                 <p className="text-xs text-muted-foreground">
                   Заявка <strong>{selectedShipment.id}</strong> — потрібно{" "}
-                  {selectedShipment.wagonCount} вагонів
+                  {1} вагонів
                 </p>
                 {suggestions.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
